@@ -24,7 +24,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args == ["--help"] {
         println!(
-            "cargo run --release [-- --screenshots]\n1: estrella | 2: rocoso | 3: gaseoso\nFlechas: orbitar | Espacio: animar/pausar | E: luna/anillos | H: malla | R: reiniciar | S: captura | Esc: salir"
+            "cargo run --release [-- --screenshots]\n1: estrella | 2: rocoso | 3: gaseoso | 4: dendro | 5: helado | 6: desertico\nFlechas: orbitar | Espacio: animar/pausar | E: luna/anillos | H: malla | R: reiniciar | S: captura | Esc: salir"
         );
         return Ok(());
     }
@@ -35,7 +35,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let mut fb = Framebuffer::new(WIDTH, HEIGHT);
     fb.set_background(crate::cosmos::generate(WIDTH, HEIGHT));
     if args == ["--screenshots"] {
-        for body in [Body::Star, Body::Rocky, Body::Gas] {
+        for body in Body::ALL {
             scene::render(&mut fb, &models, body, &scene::camera(), 0.0, true, false);
             screenshot(&fb, body)?;
         }
@@ -59,6 +59,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
             (Key::Key1, Body::Star),
             (Key::Key2, Body::Rocky),
             (Key::Key3, Body::Gas),
+            (Key::Key4, Body::Dendro),
+            (Key::Key5, Body::Ice),
+            (Key::Key6, Body::Desert),
         ] {
             if window.is_key_pressed(key, KeyRepeat::No) {
                 body = selected;
@@ -101,7 +104,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         if dirty {
             scene::render(&mut fb, &models, body, &camera, time, extras, hologram);
             let state = if animate { "Animando" } else { "Pausado" };
-            window.set_title(&format!("{} | {} | 1/2/3: cuerpos | Flechas | Espacio | E: extras | H: malla | R: reset | S: PNG", body.name(), state));
+            window.set_title(&format!("{} | {} | 1-6: cuerpos | Flechas | Espacio | E: extras | H: malla | R: reset | S: PNG", body.name(), state));
             dirty = false;
         }
         if window.is_key_pressed(Key::S, KeyRepeat::No) {

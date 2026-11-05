@@ -10,14 +10,29 @@ pub enum Body {
     Star,
     Rocky,
     Gas,
+    Dendro,
+    Ice,
+    Desert,
 }
 
 impl Body {
+    pub const ALL: [Self; 6] = [
+        Self::Star,
+        Self::Rocky,
+        Self::Gas,
+        Self::Dendro,
+        Self::Ice,
+        Self::Desert,
+    ];
+
     pub fn name(self) -> &'static str {
         match self {
             Self::Star => "Helios - Estrella",
             Self::Rocky => "Thalassa - Planeta rocoso",
             Self::Gas => "Aureon - Gigante gaseoso",
+            Self::Dendro => "Verdantia - Planeta Dendro",
+            Self::Ice => "Borealis - Planeta helado",
+            Self::Desert => "Sirocco - Planeta desertico",
         }
     }
 
@@ -26,6 +41,9 @@ impl Body {
             Self::Star => "estrella",
             Self::Rocky => "rocoso",
             Self::Gas => "gaseoso",
+            Self::Dendro => "dendro",
+            Self::Ice => "helado",
+            Self::Desert => "desertico",
         }
     }
 
@@ -91,13 +109,16 @@ pub fn render(
     let mut objects = vec![Object {
         mesh: match body {
             Body::Star => &models.star,
-            Body::Rocky => &models.rocky,
+            Body::Rocky | Body::Dendro | Body::Ice | Body::Desert => &models.rocky,
             Body::Gas => &models.gas,
         },
         shader: match body {
             Body::Star => Shader::Star,
             Body::Rocky => Shader::Rocky,
             Body::Gas => Shader::Gas,
+            Body::Dendro => Shader::Dendro,
+            Body::Ice => Shader::Ice,
+            Body::Desert => Shader::Desert,
         },
         center: Vec3::zeros(),
         scale: 1.0,
@@ -208,7 +229,7 @@ mod tests {
         let mut composed = Framebuffer::new(160, 120);
         composed.set_background(background.clone());
         let mut foreground = Framebuffer::new(160, 120);
-        for body in [Body::Star, Body::Rocky, Body::Gas] {
+        for body in Body::ALL {
             for time in [0.0, 5.0] {
                 render(&mut foreground, &models, body, &camera(), time, true, false);
                 render(&mut composed, &models, body, &camera(), time, true, false);
@@ -267,7 +288,7 @@ mod tests {
         let models = Models::load().unwrap();
         let mut fb = Framebuffer::new(320, 240);
         let mut images = Vec::new();
-        for body in [Body::Star, Body::Rocky, Body::Gas] {
+        for body in Body::ALL {
             render(&mut fb, &models, body, &camera(), 0.0, true, false);
             let painted = fb.buffer.iter().filter(|p| **p != 0).count();
             assert!(
@@ -276,13 +297,19 @@ mod tests {
             );
             assert!(fb.buffer[..320].iter().all(|p| *p == 0));
             images.push(fb.buffer.clone());
-            if body != Body::Star {
+            if matches!(body, Body::Rocky | Body::Gas) {
                 render(&mut fb, &models, body, &camera(), 0.0, false, false);
                 assert_ne!(fb.buffer, *images.last().unwrap());
             }
         }
-        assert_ne!(images[0], images[1]);
-        assert_ne!(images[1], images[2]);
+        for (i, image) in images.iter().enumerate() {
+            for other in images.iter().skip(i + 1) {
+                assert_ne!(
+                    image, other,
+                    "Los seis cuerpos deben tener diseños distintos"
+                );
+            }
+        }
         render(&mut fb, &models, Body::Rocky, &camera(), 0.0, true, false);
         let initial = fb.buffer.clone();
         render(&mut fb, &models, Body::Rocky, &camera(), 8.0, true, false);
