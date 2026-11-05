@@ -125,7 +125,7 @@ pub fn render(framebuffer: &mut Framebuffer, model: &Obj, camera: &Camera, holog
 
 fn main() -> Result<(), Box<dyn Error>> {
     let frame_delay = Duration::from_millis(16);
-    let model = Obj::load(concat!(env!("CARGO_MANIFEST_DIR"), "/Benatar.obj"))?;
+    let model = Obj::load(concat!(env!("CARGO_MANIFEST_DIR"), "/models/Benatar.obj"))?;
     let mut camera = create_camera(&model);
 
     let mut framebuffer = Framebuffer::new(WIDTH, HEIGHT);
@@ -185,7 +185,7 @@ mod tests {
 
     #[test]
     fn hologram_shows_the_mesh_instead_of_solid_surfaces() {
-        let model = Obj::load(concat!(env!("CARGO_MANIFEST_DIR"), "/Benatar.obj")).unwrap();
+        let model = Obj::load(concat!(env!("CARGO_MANIFEST_DIR"), "/models/Benatar.obj")).unwrap();
         let camera = create_camera(&model);
         let mut framebuffer = Framebuffer::new(WIDTH, HEIGHT);
         render(&mut framebuffer, &model, &camera, false);
@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn renders_the_benatar_model_inside_the_framebuffer() {
-        let model = Obj::load(concat!(env!("CARGO_MANIFEST_DIR"), "/Benatar.obj")).unwrap();
+        let model = Obj::load(concat!(env!("CARGO_MANIFEST_DIR"), "/models/Benatar.obj")).unwrap();
         assert_eq!(model.vertices.len(), 1186);
         assert_eq!(model.faces.len(), 2340);
 
