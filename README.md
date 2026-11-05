@@ -4,13 +4,72 @@ Software renderer en Rust con shaders procedurales calculados por fragmento.
 Los colores se generan con fórmulas, value noise 3D y fBm de cuatro octavas;
 no se utilizan texturas, materiales de Blender ni colores de vértice.
 
-## Ejecutar
+## Librerías Utilizadas
 
-Requiere Rust/Cargo y un entorno de escritorio para la ventana de `minifb`.
+| Librería | Descripción e Importancia |
+| :--- | :--- |
+| `minifb` | Crea la ventana, recibe la entrada del teclado y muestra en pantalla el arreglo de píxeles del framebuffer. |
+| `nalgebra-glm` | Proporciona vectores `Vec3` y operaciones matemáticas para transformar vértices, calcular normales, iluminar superficies y controlar la cámara orbital. |
+| `png` | Codifica el framebuffer como imágenes PNG para guardar las capturas de los seis cuerpos celestes e incluirlas en este README. |
 
-```sh
-cargo run --release
-```
+## Guía de Ejecución
+
+### Prerrequisitos
+
+- **Rust y Cargo:** Tener instalado [Rust](https://rustup.rs/) en una versión estable compatible con la edición 2024 del proyecto.
+- **Git:** Tener Git instalado para clonar el repositorio.
+- **En Windows:** Usar el toolchain `x86_64-pc-windows-msvc` junto con **Visual Studio C++ Build Tools** y el SDK de Windows. Instalar únicamente el toolchain de Rust no sustituye las herramientas de compilación de C++. `minifb` utiliza las APIs nativas de Win32, por lo que no necesita SDL2.
+- **En macOS:** Contar con un entorno gráfico activo y las herramientas de línea de comandos de Xcode.
+- **En Linux:** Contar con un entorno gráfico activo y las herramientas de compilación y bibliotecas de desarrollo de X11/Wayland que utilice `minifb`. En Debian/Ubuntu, según la configuración del sistema, pueden ser necesarios estos paquetes:
+
+  ```bash
+  sudo apt install build-essential cmake pkg-config libx11-dev libxkbcommon-dev libwayland-dev libwayland-cursor0
+  ```
+
+Cargo descarga y compila las librerías de Rust declaradas en `Cargo.toml`.
+Los modelos OBJ necesarios ya están incluidos en `models/`; no necesitas Blender
+para ejecutar el laboratorio.
+
+---
+
+### En Windows (PowerShell / CMD / Windows Terminal)
+
+1. Abre **PowerShell**, **CMD** o **Windows Terminal** y clona el repositorio:
+
+   ```powershell
+   git clone https://github.com/hmndzzl/Graficas_LAB5.git
+   cd Graficas_LAB5
+   ```
+
+2. Compila y ejecuta el proyecto:
+
+   ```powershell
+   cargo run --release
+   ```
+
+   También puedes usar `cargo run`: el perfil de desarrollo ya tiene `opt-level = 3`.
+
+---
+
+### En macOS / Linux (Terminal / Bash / Zsh)
+
+1. Abre tu terminal y clona el repositorio:
+
+   ```bash
+   git clone https://github.com/hmndzzl/Graficas_LAB5.git
+   cd Graficas_LAB5
+   ```
+
+2. Compila y ejecuta el proyecto:
+
+   ```bash
+   cargo run --release
+   ```
+
+   También puedes usar `cargo run`, que aplica la optimización del perfil de desarrollo.
+   
+
+## Controles
 
 Los OBJ se cargan desde `models/` usando la ruta del proyecto, aunque ejecutes
 el programa desde otro directorio. La escena inicia pausada para inspeccionar
