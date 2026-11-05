@@ -5,7 +5,7 @@ pub struct Framebuffer {
     pub height: usize,
     pub buffer: Vec<u32>,
     depth_buffer: Vec<f32>,
-    background_color: u32,
+    background: Vec<u32>,
     current_color: u32,
 }
 
@@ -31,15 +31,13 @@ impl Framebuffer {
             height,
             buffer: vec![0; width * height],
             depth_buffer: vec![f32::INFINITY; width * height],
-            background_color: 0x000000,
+            background: vec![0; width * height],
             current_color: 0xFFFFFF,
         }
     }
 
     pub fn clear(&mut self) {
-        for pixel in self.buffer.iter_mut() {
-            *pixel = self.background_color;
-        }
+        self.buffer.copy_from_slice(&self.background);
         self.depth_buffer.fill(f32::INFINITY);
     }
 
@@ -49,8 +47,13 @@ impl Framebuffer {
         }
     }
 
-    pub fn set_background_color(&mut self, color: u32) {
-        self.background_color = color;
+    pub fn set_background(&mut self, pixels: Vec<u32>) {
+        assert_eq!(
+            pixels.len(),
+            self.buffer.len(),
+            "El fondo debe coincidir con el tamaño del framebuffer"
+        );
+        self.background = pixels;
     }
 
     pub fn point_with_depth(&mut self, x: usize, y: usize, depth: f32) {
@@ -78,5 +81,26 @@ impl Framebuffer {
             let color = Color::from_hex(self.current_color);
             self.buffer[index] = (background * (1.0 - alpha) + color * alpha).to_hex();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clear_restores_procedural_background_and_resets_object_depth() {
+        let mut fb = Framebuffer::new(3, 2);
+        let background = vec![0x01020A, 0xFFFFFF, 0x10052A, 0x02030A, 0x204060, 0x080410];
+        fb.set_background(background.clone());
+        fb.clear();
+        assert_eq!(fb.buffer, background);
+        assert!(fb.is_visible(1, 0, 10.0));
+        fb.set_current_color(0xFF4400);
+        fb.point_with_depth(1, 0, 1.0);
+        assert!(!fb.is_visible(1, 0, 10.0));
+        fb.clear();
+        assert_eq!(fb.buffer, background);
+        assert!(fb.is_visible(1, 0, 10.0));
     }
 }

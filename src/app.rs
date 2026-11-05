@@ -5,7 +5,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{BACKGROUND_COLOR, HEIGHT, ROTATION_SPEED, WIDTH};
+use crate::{HEIGHT, ROTATION_SPEED, WIDTH};
 use crate::{
     framebuffer::Framebuffer,
     scene::{self, Body, Models},
@@ -33,7 +33,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     }
     let models = Models::load()?;
     let mut fb = Framebuffer::new(WIDTH, HEIGHT);
-    fb.set_background_color(BACKGROUND_COLOR);
+    fb.set_background(crate::cosmos::generate(WIDTH, HEIGHT));
     if args == ["--screenshots"] {
         for body in [Body::Star, Body::Rocky, Body::Gas] {
             scene::render(&mut fb, &models, body, &scene::camera(), 0.0, true, false);

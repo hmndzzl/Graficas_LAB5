@@ -202,6 +202,28 @@ mod tests {
     use super::*;
 
     #[test]
+    fn background_is_stable_between_scenes_and_never_overwrites_planets() {
+        let models = Models::load().unwrap();
+        let background = crate::cosmos::generate(160, 120);
+        let mut composed = Framebuffer::new(160, 120);
+        composed.set_background(background.clone());
+        let mut foreground = Framebuffer::new(160, 120);
+        for body in [Body::Star, Body::Rocky, Body::Gas] {
+            for time in [0.0, 5.0] {
+                render(&mut foreground, &models, body, &camera(), time, true, false);
+                render(&mut composed, &models, body, &camera(), time, true, false);
+                for (i, pixel) in foreground.buffer.iter().enumerate() {
+                    let expected = if *pixel == 0 { background[i] } else { *pixel };
+                    assert_eq!(
+                        composed.buffer[i], expected,
+                        "{body:?}, tiempo {time}, pixel {i}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     fn planet_hologram_shows_the_mesh_and_can_return_to_the_surface() {
         let models = Models::load().unwrap();
         let mut fb = Framebuffer::new(320, 240);
