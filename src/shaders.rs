@@ -6,6 +6,9 @@ pub enum Shader {
     Star,
     Rocky,
     Gas,
+    Dendro,
+    Ice,
+    Desert,
     Moon,
     Rings,
 }
@@ -75,21 +78,26 @@ impl Shader {
         let diffuse = normal.dot(&light).max(0.0);
         let rim = (1.0 - normal.dot(&view).abs()).clamp(0.0, 1.0).powi(3);
         let (surface, emission) = match self {
-            Self::Star => (star(p, time, rim), true),
-            Self::Rocky => (rocky(p, time, normal, view), false),
-            Self::Gas => (gas(p), false),
-            Self::Moon => (moon(p), false),
-            Self::Rings => (rings(p), false),
+            Self::Star => (Vec3::zeros(), star(p, time, rim)),
+            Self::Rocky => (rocky(p, time, normal, view), Vec3::zeros()),
+            Self::Gas => (gas(p), Vec3::zeros()),
+            Self::Dendro => (dendro(p, time), Vec3::zeros()),
+            Self::Ice => (ice(p, normal, view), Vec3::zeros()),
+            Self::Desert => (desert(p, time), Vec3::zeros()),
+            Self::Moon => (moon(p), Vec3::zeros()),
+            Self::Rings => (rings(p), Vec3::zeros()),
         };
-        let mut color = if emission {
-            surface
-        } else {
-            surface * (0.12 + 0.88 * diffuse)
-        };
+        let mut color = surface * (0.12 + 0.88 * diffuse) + emission;
         if self == Self::Rocky {
             color += rgb(0x399DFF) * rim * (0.18 + 0.55 * diffuse);
         } else if self == Self::Gas {
             color += rgb(0xF2B884) * rim * 0.28;
+        } else if self == Self::Dendro {
+            color += rgb(0x759BA1) * rim * 0.12 * diffuse;
+        } else if self == Self::Ice {
+            color += rgb(0x4ACDFF) * rim * 0.35;
+        } else if self == Self::Desert {
+            color += rgb(0xE89A52) * rim * 0.18;
         }
         Color::new(
             color.x.clamp(0.0, 255.0) as u8,
@@ -166,6 +174,123 @@ fn gas(p: Vec3) -> Vec3 {
     mix(c, storm, 1.0 - smoothstep(0.75, 1.15, radius))
 }
 
+/// Diferencia entre las dos semillas más cercanas de celdas Voronoi 3D.
+/// Cerca de una frontera vale cero; permite dibujar placas sin costuras UV.
+fn cell_edges(p: Vec3) -> f32 {
+    let cell = p.map(|v| v.floor());
+    let mut nearest = f32::INFINITY;
+    let mut second = f32::INFINITY;
+    for z in -1..=1 {
+        for y in -1..=1 {
+            for x in -1..=1 {
+                let c = cell + Vec3::new(x as f32, y as f32, z as f32);
+                let (cx, cy, cz) = (c.x as i32, c.y as i32, c.z as i32);
+                let seed = c + Vec3::new(
+                    hash(cx, cy, cz),
+                    hash(cx + 53, cy, cz + 19),
+                    hash(cx, cy + 71, cz + 37),
+                );
+                let d = (p - seed).norm_squared();
+                if d < nearest {
+                    second = nearest;
+                    nearest = d;
+                } else if d < second {
+                    second = d;
+                }
+            }
+        }
+    }
+    second.sqrt() - nearest.sqrt()
+}
+
+/// Un mundo de bosques y agua dulce: todo el color responde a la luz externa.
+fn dendro(p: Vec3, time: f32) -> Vec3 {
+    let height = fbm(p * 3.2 + Vec3::new(9.0, 21.0, 4.0));
+    let humidity = fbm(p * 6.0 + Vec3::new(3.0, 17.0, 29.0));
+    // 1. Bosques templados y selvas, con copas de árboles a distintas escalas.
+    let forest = mix(rgb(0x527B3D), rgb(0x205A37), smoothstep(0.3, 0.7, humidity));
+    let crowns = noise(p * 76.0 + Vec3::repeat(11.0));
+    let groves = fbm(p * 22.0 + Vec3::new(5.0, 11.0, 31.0));
+    let mut surface = forest * (0.76 + 0.38 * crowns + 0.24 * groves);
+    // 2. Praderas y claros irregulares entre los bosques.
+    let clearings = smoothstep(0.53, 0.68, groves) * (1.0 - smoothstep(0.54, 0.67, height));
+    surface = mix(surface, rgb(0x8A9853), clearings * 0.85);
+    // 3. Cordilleras rocosas: el relieve se representa únicamente con colores.
+    let ridges = 1.0 - (fbm(p * 11.0 + Vec3::repeat(33.0)) * 2.0 - 1.0).abs();
+    let mountains = smoothstep(0.59, 0.72, height + ridges * 0.07);
+    let rock = mix(rgb(0x656F5D), rgb(0xA9AC96), smoothstep(0.5, 0.9, ridges));
+    surface = mix(surface, rock, mountains * 0.85);
+    // 4. Ríos y lagos azul verdoso que recorren los valles.
+    let valley = fbm(p * 5.0 + Vec3::new(17.0, 3.0, 8.0));
+    let river = (1.0 - smoothstep(0.002, 0.010, (valley - 0.48).abs()))
+        * (1.0 - smoothstep(0.55, 0.64, height));
+    let lakes = 1.0 - smoothstep(0.33, 0.39, height);
+    let water = river.max(lakes);
+    let banks = (1.0 - smoothstep(0.010, 0.022, (valley - 0.48).abs())) * (1.0 - mountains);
+    surface = mix(surface, rgb(0x728B57), banks * 0.35);
+    surface = mix(
+        surface,
+        mix(rgb(0x183F4B), rgb(0x35787D), humidity),
+        water * 0.95,
+    );
+    // Bruma tenue sobre los bosques, sin filamentos ni emisión luminosa.
+    let mist = smoothstep(
+        0.55,
+        0.72,
+        fbm(p * 5.0 + Vec3::new(time * 0.018, 27.0, 13.0)),
+    );
+    mix(surface, rgb(0xD5DFCF), mist * 0.16)
+}
+
+fn ice(p: Vec3, normal: Vec3, view: Vec3) -> Vec3 {
+    let terrain = fbm(p * 4.0 + Vec3::new(4.0, -17.0, 26.0));
+    // 1. Glaciares de tonos azul pálido y blanco.
+    let mut c = mix(
+        rgb(0x74ABCE),
+        rgb(0xDDEEF5),
+        smoothstep(0.25, 0.72, terrain),
+    );
+    // 2. Grietas azules entre placas de hielo deformadas por ruido.
+    let warp =
+        Vec3::new(terrain, noise(p * 7.0), noise(p * 7.0 + Vec3::repeat(9.0))) - Vec3::repeat(0.5);
+    let edge = cell_edges(p * 4.8 + warp * 0.75);
+    let cracks = 1.0 - smoothstep(0.015, 0.10, edge);
+    c = mix(c, rgb(0x146392), cracks * 0.9);
+    // 3. Escarcha granular sobre los glaciares.
+    let frost = smoothstep(0.47, 0.69, fbm(p * 28.0 + Vec3::repeat(13.0)));
+    c = mix(c, rgb(0xF4FBFF), frost * (1.0 - cracks) * 0.65);
+    // 4. Depósitos minerales violetas atrapados bajo el hielo.
+    let minerals = smoothstep(0.54, 0.70, fbm(p * 3.0 + Vec3::repeat(43.0)));
+    c = mix(c, rgb(0xA18DC7), minerals * 0.48);
+    let halfway = (light_direction() + view).normalize();
+    c + rgb(0xE0F6FF) * normal.dot(&halfway).max(0.0).powi(90) * (1.0 - cracks) * 0.65
+}
+
+fn desert(p: Vec3, time: f32) -> Vec3 {
+    let terrain = fbm(p * 3.5 + Vec3::new(19.0, 4.0, 8.0));
+    // 1. Estratos de arenisca y mesetas de terracota.
+    let mut c = mix(
+        rgb(0x934B35),
+        rgb(0xE7B36B),
+        smoothstep(0.25, 0.72, terrain),
+    );
+    // 2. Dunas finas y sinuosas orientadas por un campo de ruido.
+    let dune = 0.5 + 0.5 * (p.x * 105.0 + p.z * 34.0 + fbm(p * 7.0) * 19.0).sin();
+    c = mix(c, rgb(0xF4CC86), smoothstep(0.55, 0.96, dune) * 0.38);
+    // 3. Cañones oscuros y salares en los polos.
+    let canyon = 1.0 - smoothstep(0.012, 0.045, (terrain - 0.50).abs());
+    c = mix(c, rgb(0x60312D), canyon * 0.78);
+    let salt = smoothstep(0.88, 0.98, p.y.abs() + (terrain - 0.5) * 0.2);
+    c = mix(c, rgb(0xE8D9B7), salt);
+    // 4. Tormentas de polvo que cruzan lentamente las dunas.
+    let dust = smoothstep(
+        0.50,
+        0.69,
+        fbm(p * 5.0 + Vec3::new(time * 0.03, 23.0, -5.0)),
+    );
+    mix(c, rgb(0xD6A16C), dust * 0.6)
+}
+
 fn moon(p: Vec3) -> Vec3 {
     let maria = fbm(p * 4.0 + Vec3::repeat(31.0));
     let mut c = mix(rgb(0x555569), rgb(0xC4C0B7), smoothstep(0.3, 0.65, maria));
@@ -196,6 +321,56 @@ fn rings(p: Vec3) -> Vec3 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dendro_surface_is_dark_without_external_light() {
+        let light = light_direction();
+        for i in 0..100 {
+            let p = Vec3::new((i as f32 * 2.4).sin(), (i as f32 * 0.7).cos(), 1.0).normalize();
+            let brightness = |c: u32| ((c >> 16) & 255) + ((c >> 8) & 255) + (c & 255);
+            let day = brightness(Shader::Dendro.shade(p, light, light, 0.0).to_hex());
+            let night = brightness(Shader::Dendro.shade(p, -light, light, 0.0).to_hex());
+            assert!(
+                night as f32 <= day as f32 * 0.2 + 3.0,
+                "La vegetación no debe emitir luz propia"
+            );
+        }
+    }
+
+    #[test]
+    fn extra_planets_have_distinct_palettes() {
+        use std::collections::HashSet;
+        let view = Vec3::z();
+        let mut patterns = Vec::new();
+        for shader in [Shader::Dendro, Shader::Ice, Shader::Desert] {
+            let mut colors = HashSet::new();
+            let mut red = 0_u32;
+            let mut blue = 0_u32;
+            let mut green = 0_u32;
+            for i in 0..200 {
+                let p = Vec3::new((i as f32 * 2.4).sin(), (i as f32 * 0.7).cos(), 1.0).normalize();
+                let color = shader.shade(p, p, view, 0.0).to_hex();
+                colors.insert(color);
+                red += (color >> 16) & 255;
+                blue += color & 255;
+                green += (color >> 8) & 255;
+            }
+            assert!(colors.len() > 100, "{shader:?}: variedad insuficiente");
+            if shader == Shader::Dendro {
+                assert!(
+                    green > red && green > blue,
+                    "Dendro debe tener una paleta verde"
+                );
+            } else if shader == Shader::Ice {
+                assert!(blue > red);
+            } else {
+                assert!(red > blue);
+            }
+            patterns.push(colors);
+        }
+        assert_ne!(patterns[0], patterns[1]);
+        assert_ne!(patterns[1], patterns[2]);
+    }
 
     #[test]
     fn noise_is_continuous_bounded_and_repeatable_in_negative_coordinates() {
