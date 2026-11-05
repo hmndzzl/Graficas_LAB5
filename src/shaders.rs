@@ -26,12 +26,12 @@ fn mix(a: Vec3, b: Vec3, t: f32) -> Vec3 {
     a + (b - a) * t.clamp(0.0, 1.0)
 }
 
-fn smoothstep(a: f32, b: f32, x: f32) -> f32 {
+pub(crate) fn smoothstep(a: f32, b: f32, x: f32) -> f32 {
     let t = ((x - a) / (b - a)).clamp(0.0, 1.0);
     t * t * (3.0 - 2.0 * t)
 }
 
-fn hash(x: i32, y: i32, z: i32) -> f32 {
+pub(crate) fn hash(x: i32, y: i32, z: i32) -> f32 {
     let mut h = (x as u32).wrapping_mul(374761393)
         ^ (y as u32).wrapping_mul(668265263)
         ^ (z as u32).wrapping_mul(2147483647);
@@ -40,7 +40,7 @@ fn hash(x: i32, y: i32, z: i32) -> f32 {
 }
 
 /// Value noise tridimensional: no hay costura de UV ni imágenes precalculadas.
-fn noise(p: Vec3) -> f32 {
+pub(crate) fn noise(p: Vec3) -> f32 {
     let base = p.map(|v| v.floor());
     let f = (p - base).map(|v| v * v * (3.0 - 2.0 * v));
     let mut result = 0.0;
@@ -57,7 +57,7 @@ fn noise(p: Vec3) -> f32 {
     result
 }
 
-fn fbm(mut p: Vec3) -> f32 {
+pub(crate) fn fbm(mut p: Vec3) -> f32 {
     let mut value = 0.0;
     let mut weight = 0.5;
     for _ in 0..4 {
