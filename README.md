@@ -46,6 +46,19 @@ La estrella simula su propia emisión mediante el color; no ilumina físicamente
 otras escenas ni usa bloom. Cada escena tiene una luz direccional fija.
 Los efectos atmosféricos también son mezclas de color en la superficie.
 
+### Fondo del cosmos
+
+El fondo combina una franja galáctica diagonal, nebulosas violetas y turquesas,
+polvo oscuro y estrellas blancas, azuladas y cálidas con distintos tamaños.
+Las más brillantes tienen un halo suave y pequeños destellos.
+
+Todo se genera mediante ruido y fórmulas en `src/cosmos.rs`, con una semilla fija.
+Se calcula una vez al iniciar y se conserva como fondo del framebuffer, sin leer
+imágenes ni recalcular las nebulosas en cada cuadro. Permanece fijo en pantalla
+al orbitar la cámara, animar o cambiar de cuerpo; no simula un cielo esférico.
+Al limpiar el framebuffer se restaura el fondo y se reinicia el z-buffer, para
+que los planetas, la luna y los anillos siempre puedan dibujarse delante.
+
 ### Helios
 
 ![Estrella Helios](screenshots/estrella.png)
@@ -87,13 +100,15 @@ cargo clippy --all-targets
 
 Las pruebas verifican interpolación y profundidad de fragmentos, continuidad del
 ruido, variedad de colores, emisión de la estrella, cambios por animación,
-renderizado de las escenas y modo de malla de los planetas.
+renderizado de las escenas, modo de malla de los planetas y composición del fondo
+sin alterar el color ni la profundidad de los cuerpos.
 
 ## Código
 
 - `src/app.rs`: ventana, controles y exportación de capturas.
 - `src/scene.rs`: carga de modelos, transformaciones, cámara y dibujo de objetos.
 - `src/shaders.rs`: ruido y shaders de los cuerpos, luna y anillos.
+- `src/cosmos.rs`: generación procedural del campo de estrellas y las nebulosas.
 - `src/triangle.rs`: rasterización e interpolación de posiciones locales.
 - `src/framebuffer.rs`: color, profundidad y escritura de PNG.
 - `src/main.rs`: entrada y configuración general del laboratorio.
