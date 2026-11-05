@@ -10,6 +10,21 @@ pub struct Framebuffer {
 }
 
 impl Framebuffer {
+    pub fn save_png(&self, path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+        let file = std::io::BufWriter::new(std::fs::File::create(path)?);
+        let mut encoder = png::Encoder::new(file, self.width as u32, self.height as u32);
+        encoder.set_color(png::ColorType::Rgb);
+        encoder.set_depth(png::BitDepth::Eight);
+        let mut writer = encoder.write_header()?;
+        let pixels: Vec<u8> = self
+            .buffer
+            .iter()
+            .flat_map(|pixel| [(pixel >> 16) as u8, (pixel >> 8) as u8, *pixel as u8])
+            .collect();
+        writer.write_image_data(&pixels)?;
+        Ok(())
+    }
+
     pub fn new(width: usize, height: usize) -> Self {
         Framebuffer {
             width,
@@ -46,6 +61,10 @@ impl Framebuffer {
                 self.point(x, y);
             }
         }
+    }
+
+    pub fn is_visible(&self, x: usize, y: usize, depth: f32) -> bool {
+        x < self.width && y < self.height && depth < self.depth_buffer[y * self.width + x]
     }
 
     pub fn set_current_color(&mut self, color: u32) {
