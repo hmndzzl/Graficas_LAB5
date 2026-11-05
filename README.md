@@ -1,4 +1,4 @@
-# Gráficas — Laboratorio 5
+# Gráficas por Computadora — Laboratorio 5 Shaders
 
 Software renderer en Rust con shaders procedurales calculados por fragmento.
 Los colores se generan con fórmulas, value noise 3D y fBm de cuatro octavas;
@@ -67,7 +67,7 @@ para ejecutar el laboratorio.
    ```
 
    También puedes usar `cargo run`, que aplica la optimización del perfil de desarrollo.
-   
+
 
 ## Controles
 
@@ -209,3 +209,9 @@ el color ni la profundidad de los cuerpos.
 - `src/triangle.rs`: rasterización e interpolación de posiciones locales.
 - `src/framebuffer.rs`: color, profundidad y escritura de PNG.
 - `src/main.rs`: entrada y configuración general del laboratorio.
+
+## Autor
+
+**Hugo Méndez** - Carné 241265
+*Universidad del Valle de Guatemala*
+*Gráficas por Computadora - Laboratorio 5*
